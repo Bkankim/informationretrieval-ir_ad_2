@@ -3,8 +3,11 @@
 1. 실행방법
 - install_elasticsearch.sh 실행
 - elasticsearch-.8.8.0/config/elasticsearch.yml에서
+
     xpack.security.enabled: false
+  
     xpack.security.http.ssl.enabled: false
+  
     xpack.security.transport.ssl.enabled: false 확인
 - run_elasticsearch.sh 실행
 - rag_with_elasticsearch.py 실행
