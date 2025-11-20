@@ -18,7 +18,7 @@ ES_USERNAME = os.getenv("ES_USERNAME")
 ES_PASSWORD = os.getenv("ES_PASSWORD")
 ES_CA_CERT = os.getenv("ES_CA_CERT")   # ex) ./http_ca.crt
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-LLM_MODEL= "gpt-4o-mini"
+LLM_MODEL= "solar-pro2" # gpt-40-mini에서 변경
 
 # 환경변수 확인(디버깅용)
 print("[INFO] Loaded environment variables:")
@@ -95,6 +95,53 @@ def dense_retrieve(query_str, size):
     }
     return es.search(index="test", knn=knn)
 
+def hybrid_retrieve(query_str, size, alpha=0.5): # 하이브리드 함수
+    """
+    sparse(BM25)와 dense(KNN) 결과를 가중 합으로 섞는 하이브리드 검색.
+    - alpha: sparse 가중치 (0~1). 0.5면 동등한 비중.
+    """
+    # 각각 검색
+    sparse = sparse_retrieve(query_str, size)
+    dense = dense_retrieve(query_str, size)
+    
+    combined = {}
+    
+    def normalized_and_add(results, weight):
+        hits = results.get("hits", {}).get("hits", [])
+        if not hits:
+            return
+        # 점수 정규화
+        max_score = max(h["_score"] for h in hits) or 1.0
+        for h in hits:
+            src = h.get("_source", {})
+            docid = src.get("docid")
+            if docid is None:
+                # docid 없으면 스킵
+                continue
+            norm_score = (h["_score"] / max_score) * weight
+            if docid not in combined:
+                combined[docid] = {
+                    "_source": src,
+                    "_score": 0.0,
+                }
+            combined[docid]["_score"] += norm_score
+            
+    # sparse / dense 각각 반영
+    normalized_and_add(sparse, alpha)
+    normalized_and_add(dense, 1 - alpha)
+    
+    # 점수 순으로 정렬 후 상위 size개 선택
+    merged_hits = sorted(
+        [
+            {"_source": v["_source"], "_score": v["_score"]}
+            for v in combined.values()
+        ],
+        key=lambda x: x["_score"],
+        reverse=True,
+    )[:size]
+    
+    # sparse_retrieve와 비슷한 형태로 반환
+    return {"hits": {"hits": merged_hits}}
 
 # -------------------------------
 # 5. Elasticsearch 인덱스 설정
@@ -156,7 +203,10 @@ print(ret)
 # 8. RAG 구현
 # -------------------------------
 os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY # type: ignore
-client = OpenAI()
+client = OpenAI(
+    api_key=OPENAI_API_KEY,
+    base_url="https://api.upstage.ai/v1",
+)
 llm_model = LLM_MODEL
 
 persona_function_calling = """
@@ -331,8 +381,10 @@ def answer_question(messages):
         tool_call = result.choices[0].message.tool_calls[0]
         function_args = json.loads(tool_call.function.arguments) # type: ignore
         standalone_query = function_args.get("standalone_query")
-
-        search_result = sparse_retrieve(standalone_query, 3)
+        
+        # hybrid_retrieve 사용
+        search_result = hybrid_retrieve(standalone_query, 3, alpha=0.5)
+        # search_result = sparse_retrieve(standalone_query, 3)
         response["standalone_query"] = standalone_query
 
         retrieved_context = []
@@ -388,4 +440,4 @@ def eval_rag(eval_filename, output_filename):
             idx += 1
 
 
-eval_rag("./data/eval.jsonl", "sample_submission.csv")
+eval_rag("./data/eval.jsonl", "sample_submission_hybrid2.csv")
