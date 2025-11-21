@@ -407,6 +407,7 @@ $RECYCLE.BIN/
 
 # data
 /data
+sample_submission*.csv
 
 # elasticsearch
 /elasticsearch*
