@@ -112,42 +112,72 @@ def dense_retrieve(query_str, size):
     }
     return es.search(index="test", knn=knn)
 
-def hybrid_retrieve(query_str, size, alpha=0.5): # 하이브리드 함수
+def hybrid_retrieve(query_str, size, alpha=0.5):  # 하이브리드 함수
     """
     sparse(BM25)와 dense(KNN) 결과를 가중 합으로 섞는 하이브리드 검색.
     - alpha: sparse 가중치 (0~1). 0.5면 동등한 비중.
+    - dense 쪽은 ES의 l2_norm 점수를 distance로 보고, 1/(1+distance)로 유사도 변환 후 z-score 정규화.
+    - sparse(BM25)도 z-score 정규화 후 가중합.
     """
     # 각각 검색
-    sparse = sparse_retrieve(query_str, size)
-    dense = dense_retrieve(query_str, size)
+    sparse_result = sparse_retrieve(query_str, size)
+    dense_result = dense_retrieve(query_str, size)
 
+    # docid 기준으로 통합할 딕셔너리
     combined = {}
 
-    def normalized_and_add(results, weight):
+    def normalized_and_add(results, weight, is_dense=False):
+        """
+        - results: ES search 결과 (sparse or dense)
+        - weight: hybrid 가중치 (sparse: alpha, dense: 1-alpha)
+        - is_dense: dense(knn)인지 여부 (True면 distance→similarity 변환 적용)
+        """
         hits = results.get("hits", {}).get("hits", [])
         if not hits:
             return
-        # 점수 정규화
-        max_score = max(h["_score"] for h in hits) or 1.0
+
+        # 1) 점수 리스트 추출 + dense면 distance → similarity 변환
+        scores = []
         for h in hits:
+            s = h.get("_score", 0.0)
+            if is_dense:
+                # ES l2_norm을 distance로 간주하고, 1/(1+distance)로 유사도 변환
+                # (distance가 작을수록 유사도가 커지는 형태로 매핑)
+                s = 1.0 / (1.0 + s)
+            scores.append(s)
+
+        scores_np = np.array(scores, dtype="float32")
+
+        # 2) z-score 정규화: z = (s - mean) / std
+        mean = float(scores_np.mean())
+        std = float(scores_np.std()) or 1.0  # std가 0이면 1로 방어
+        z_scores = (scores_np - mean) / std
+
+        # 3) docid 단위로 가중합
+        for h, z in zip(hits, z_scores):
             src = h.get("_source", {})
             docid = src.get("docid")
             if docid is None:
                 # docid 없으면 스킵
                 continue
-            norm_score = (h["_score"] / max_score) * weight
+
             if docid not in combined:
                 combined[docid] = {
                     "_source": src,
                     "_score": 0.0,
                 }
-            combined[docid]["_score"] += norm_score
+
+            combined[docid]["_score"] += float(z) * weight
 
     # sparse / dense 각각 반영
-    normalized_and_add(sparse, alpha)
-    normalized_and_add(dense, 1 - alpha)
+    normalized_and_add(sparse_result, alpha, is_dense=False)
+    normalized_and_add(dense_result, 1 - alpha, is_dense=True)
 
-    # 점수 순으로 정렬 후 상위 size개 선택
+    # 통합 결과가 비어 있으면 바로 빈 결과 반환
+    if not combined:
+        return {"hits": {"hits": []}}
+
+    # 최종 스코어 기준으로 정렬 후 상위 size개 선택
     merged_hits = sorted(
         [
             {"_source": v["_source"], "_score": v["_score"]}
@@ -450,4 +480,4 @@ def eval_rag(eval_filename, output_filename):
             idx += 1
 
 
-eval_rag("./data/eval.jsonl", "sample_submission_hybrid_openaiemb.csv")
+eval_rag("./data/eval.jsonl", "sample_submission_hybrid_rev_hybrid.csv")
