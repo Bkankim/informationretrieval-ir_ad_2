@@ -8,7 +8,6 @@ from elasticsearch import Elasticsearch
 
 from llm.embedding import EmbeddingService
 
-
 # sparse_retrieve는 BM25 검색 결과를 반환한다.
 def sparse_retrieve(
     client: Elasticsearch,
@@ -22,20 +21,29 @@ def sparse_retrieve(
 
 # dense_retrieve는 KNN 검색을 수행한다.
 def dense_retrieve(
-    client: Elasticsearch,
+    client,
     index_name: str,
     query_text: str,
-    size: int,
     embedder: EmbeddingService,
-) -> Dict[str, Any]:
+    size: int = 5,
+):
     query_embedding = embedder.encode([query_text])[0]
+
+    # numpy array든 list든 모두 처리
+    if hasattr(query_embedding, "tolist"):
+        query_vector = query_embedding.tolist()
+    else:
+        query_vector = query_embedding
+
     knn_query = {
         "field": "embeddings",
-        "query_vector": query_embedding.tolist(),
+        "query_vector": query_vector,
         "k": size,
         "num_candidates": 100,
     }
-    return client.search(index=index_name, knn=knn_query)
+
+    response = client.search(index=index_name, knn=knn_query)
+    return response
 
 
 # hybrid_retrieve는 sparse/dense 결과를 정규화 후 병합한다.
@@ -43,12 +51,12 @@ def hybrid_retrieve(
     client: Elasticsearch,
     index_name: str,
     query_text: str,
-    size: int,
     embedder: EmbeddingService,
+    size: int,
     alpha: float = 0.5,
 ):
     sparse = sparse_retrieve(client, index_name, query_text, size)
-    dense = dense_retrieve(client, index_name, query_text, size, embedder)
+    dense = dense_retrieve(client, index_name, query_text, embedder, size)
 
     combined: Dict[str, Dict[str, Any]] = {}
 

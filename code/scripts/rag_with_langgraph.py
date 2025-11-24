@@ -45,8 +45,17 @@ def prepare_index(
 ):
     docs = fetch_all_documents(documents_path)
     embeddings = embedder.encode_documents(docs)
+
+    if not embeddings:
+        raise RuntimeError("임베딩이 비어 있습니다. documents.jsonl 내용을 확인하세요.")
+
+    dim = len(embeddings[0])
+
     for doc, embedding in zip(docs, embeddings):
-        doc["embeddings"] = embedding.tolist()
+        # Upstage+투영 결과는 이미 list[float] 이라서 그대로 사용
+        if hasattr(embedding, "tolist"):
+            embedding = embedding.tolist()
+        doc["embeddings"] = embedding
 
     settings = {
         "analysis": {
@@ -71,9 +80,9 @@ def prepare_index(
             "content": {"type": "text", "analyzer": "nori"},
             "embeddings": {
                 "type": "dense_vector",
-                "dims": 768,
+                "dims": dim,
                 "index": True,
-                "similarity": "l2_norm",
+                "similarity": "cosine",  # cosine 추천 (원래 l2_norm 쓰고 있으면 유지해도 상관 X)
             },
         }
     }

@@ -53,7 +53,7 @@ def build_callbacks(deps: RagDependencies) -> RagGraphCallbacks:
         )
 
     # generate_answer는 검색 결과를 바탕으로 최종 답변을 생성한다.
-    def generate_answer(messages: List[Dict], docs: List[Dict]):
+    def generate_answer(messages: List[Dict], docs: List[str]):
         return generate_final_answer(messages, docs, llm_client, deps.settings.llm)
 
     return RagGraphCallbacks(

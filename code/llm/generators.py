@@ -156,7 +156,7 @@ def safe_chat_completion(
         try:
             return client.chat.completions.create(**kwargs)
         except Exception as exc:  # noqa: BLE001
-            print(f"[WARN] LLM 호출 실패 (시도 {attempt}/{max_retries}): {exc}")
+            print(f"[WARN] LLM 호출 실패 (시도 {attempt}/{max_retries}): {exc} / kwargs={kwargs}")
             if attempt == max_retries:
                 print("[ERROR] 연속 실패로 빈 응답을 반환합니다.")
                 return None
