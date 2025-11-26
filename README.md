@@ -3,7 +3,7 @@
 
 ## Quick Facts
 - 기간/팀: 2주, 4인
-- 역할(본인): LangGraph 기반 RAG로 파이프라인 재구성, 프롬프트 고도화·튜닝
+- 역할(본인): 원본 BM25/단일 랭킹 파이프라인을 LangGraph 기반 그래프형 재랭킹으로 리팩토링, 프롬프트 고도화·튜닝
 - 문제: 과학 문서에서 질문에 맞는 증거/답변 검색·랭킹 품질이 낮아 MAP/MRR 저조
 - 지표: MAP/MRR 0.4242 → 0.8795 / 0.8818 (+107%, Public LB)
 - 스택: Solar Embedding, LangGraph, Elasticsearch, Prompt Tuning, Python
@@ -12,9 +12,15 @@
 과학 도메인 질의응답 대회에서 검색·랭킹 품질이 부족해 정답 회수가 낮았습니다. 2주 안에 LangGraph 기반 RAG 파이프라인으로 재설계하고 랭킹·프롬프트를 튜닝해 MAP/MRR을 크게 끌어올리는 것이 목표였습니다.
 
 ## Results
-- MAP: 0.4242 → 0.8795
-- MRR: 0.4242 → 0.8818
+- MAP: 0.4242 → 0.8795 (Public LB)
+- MRR: 0.4242 → 0.8818 (Public LB)
 - Public Leaderboard 기준 +107% 개선
+
+### Baseline → Final
+| Run | MAP | MRR | Notes |
+| --- | --- | --- | --- |
+| Baseline (BM25-only/원본 파이프라인) | 0.4242 | 0.4242 | 단일 BM25, 재랭킹 없음 |
+| Final (LangGraph + Solar) | 0.8795 | 0.8818 | LangGraph 흐름 + Solar 임베딩 재랭킹, Public LB (스크린샷 별도 제공 가능) |
 
 ## Stack
 - 임베딩/랭킹: Solar Embedding, LangGraph 플로우 튜닝(Top-k·스코어 컷 조정), 후보 필터링
@@ -27,7 +33,7 @@
 - Situation: 초기 MAP/MRR 0.4242/0.4242로 과학 QA 검색·랭킹 품질 저조.
 - Task: 2주 내 랭킹 지표 대폭 개선; 나는 랭킹·프롬프트·튜닝 담당.
 - Action:
-  - Solar 임베딩 도입, **LangGraph 기반 RAG 플로우로 재구성**하며 후보 필터·가중치 튜닝
+  - Solar 임베딩 도입, **원본 BM25/단일 랭킹 → LangGraph 기반 그래프형 재랭킹 플로우로 재구성**하며 후보 필터·가중치 튜닝
   - Top-k, 스코어 컷, 후보 필터링 튜닝으로 검색 후보 품질 개선
   - 프롬프트 고도화: 쿼리 리라이트, 증거 강조 템플릿, 포맷 일관성 확보
   - MAP/MRR 기반 실험 버전 관리·비교로 빠른 피드백 루프 구축
@@ -52,8 +58,17 @@ bash code/run_elasticsearch.sh
 uv run python code/scripts/rag_with_langgraph.py --skip-index --alpha 0.5 --topk 3
 
 # 4) 제출/검증
-# 결과 파일 예: code/sample_submission_hybrid2.csv
+# 결과 파일 예: code/sample_submission_hybrid2.csv (평가 스크립트 출력 샘플)
 ```
+
+### Requirements
+- Python 3.12, uv (권장) 또는 pip
+- Elasticsearch 8.8.0 (+ analysis-nori), 로컬 http://127.0.0.1:9200 기준
+- 필수 환경변수: `SOLAR_API_KEY` 또는 `OPENAI_API_KEY`, `ES_USERNAME`, `ES_PASSWORD`, `ES_CA_CERT` (로컬 보안 끈 경우 user/pass 생략 가능)
+
+### Data & Evaluation
+- `code/data/documents.jsonl` (~4.2k 문서), `code/data/eval.jsonl` (220개 쿼리/정답) — 대회 제공 과학 QA 코퍼스/밸리데이션 샘플
+- 제출/평가 출력 예시: `code/sample_submission_hybrid2.csv`
 
 ## Challenges & Insights
 - 비과학/노이즈 문서 다량 → Elasticsearch 필터링 + LangGraph 단계별 후보 컷으로 정밀도 확보.
@@ -95,8 +110,8 @@ uv run python code/scripts/rag_with_langgraph.py --skip-index --alpha 0.5 --topk
     |   |-- documents.jsonl
     |   `-- eval.jsonl
     `-- experiments/
-        |-- experiment-log.md
-        `-- langgraph-skeleton.md
+        |-- experiment-log.md       # 실험 기록/결과 로그
+        `-- langgraph-skeleton.md   # LangGraph 설계/실험 노트
 ```
 
 ## Lessons / Next
