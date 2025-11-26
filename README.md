@@ -56,38 +56,39 @@ uv run python code/scripts/rag_with_langgraph.py --skip-index --alpha 0.5 --topk
 
 ## Repo Structure (핵심 파일)
 ```
-README.md
-pyproject.toml
-uv.lock
-code/
-  README.md               # LangGraph 기반 RAG 실행 가이드
-  requirements.txt
-  .env.example
-  install_elasticsearch.sh
-  run_elasticsearch.sh
-  stop_elasticsearch.sh
-  rag_with_elasticsearch.py
-  run_once.py
-  scripts/
-    rag_with_langgraph.py # LangGraph RAG 실행 스크립트
-  pipelines/
-    langgraph_pipeline.py
-    rag_callbacks.py
-  retrieval/
-    retriever.py
-    elasticsearch_utils.py
-    non_science.py        # 비과학 필터링
-  llm/
-    embedding.py
-    generators.py
-  config/
-    settings.py
-  data/
-    documents.jsonl
-    eval.jsonl
-  experiments/
-    experiment-log.md
-    langgraph-skeleton.md
+.
+|-- README.md
+|-- pyproject.toml
+|-- uv.lock
+`-- code/
+    |-- README.md               # LangGraph 기반 RAG 실행 가이드
+    |-- requirements.txt
+    |-- .env.example
+    |-- install_elasticsearch.sh
+    |-- run_elasticsearch.sh
+    |-- stop_elasticsearch.sh
+    |-- rag_with_elasticsearch.py
+    |-- run_once.py
+    |-- scripts/
+    |   `-- rag_with_langgraph.py # LangGraph RAG 실행 스크립트
+    |-- pipelines/
+    |   |-- langgraph_pipeline.py
+    |   `-- rag_callbacks.py
+    |-- retrieval/
+    |   |-- retriever.py
+    |   |-- elasticsearch_utils.py
+    |   `-- non_science.py        # 비과학 필터링
+    |-- llm/
+    |   |-- embedding.py
+    |   `-- generators.py
+    |-- config/
+    |   `-- settings.py
+    |-- data/
+    |   |-- documents.jsonl
+    |   `-- eval.jsonl
+    `-- experiments/
+        |-- experiment-log.md
+        `-- langgraph-skeleton.md
 ```
 
 ## Lessons / Next
