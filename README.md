@@ -1,4 +1,5 @@
-# 과학 질의응답 IR 대회 (RAG) — Solar + LangGraph 리팩토링
+# 과학 질의응답 IR 대회 (RAG)
+<img width="1205" height="299" alt="image" src="https://github.com/user-attachments/assets/7e0830f5-aa77-49ac-be91-fccf168b6f7e" />
 
 ## Quick Facts
 - 기간/팀: 2주, 4인
