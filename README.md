@@ -54,6 +54,13 @@ uv run python code/scripts/rag_with_langgraph.py --skip-index --alpha 0.5 --topk
 # 결과 파일 예: code/sample_submission_hybrid2.csv
 ```
 
+## Challenges & Insights
+- 비과학/노이즈 문서 다량 → Elasticsearch 필터링 + LangGraph 단계별 후보 컷으로 정밀도 확보.
+- BM25-only/임베딩-only 편향 → 하이브리드 후보와 스코어 가중치 튜닝이 MAP/MRR 개선에 결정적.
+- 프롬프트 포맷 일관성 부족 → LangGraph 상태 머신으로 출력 스키마 검증·재시도 경로를 넣어 안정화.
+- 반복 실험 비용/속도 → 소형 eval 세트와 실험 로그(`experiments/`)로 빠른 피드백 루프 확보.
+- ES 자원/인덱싱 시간 제약 → 재인덱싱 스킵 플래그(`--skip-index`)와 샘플 데이터로 개발 속도 유지.
+
 ## Repo Structure (핵심 파일)
 ```
 .
