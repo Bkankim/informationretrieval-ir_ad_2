@@ -6,10 +6,10 @@
 
 ## Team
 
-| ![박패캠](https://avatars.githubusercontent.com/u/156163982?v=4) | ![이패캠](https://avatars.githubusercontent.com/u/156163982?v=4) | ![최패캠](https://avatars.githubusercontent.com/u/156163982?v=4) | ![김패캠](https://avatars.githubusercontent.com/u/156163982?v=4) | ![오패캠](https://avatars.githubusercontent.com/u/156163982?v=4) |
+| <img width="135" height="134" alt="image" src="https://github.com/user-attachments/assets/be58e056-194d-49f6-a3f7-8be86858774b" />| <img width="134" height="136" alt="image" src="https://github.com/user-attachments/assets/c20eaf3f-5939-4066-b425-590cf8d2d46a" /> | <img width="135" height="134" alt="image" src="https://github.com/user-attachments/assets/a2fa6cd6-fefe-41cf-8c65-7e314c503c3a" /> | <img width="135" height="135" alt="image" src="https://github.com/user-attachments/assets/18d39882-d1ba-4103-94c4-f8cead3088d5" /> | <img width="130" height="127" alt="image" src="https://github.com/user-attachments/assets/83acdead-ad49-4980-bba1-fbbbf1c6af8f" />|
 | :--------------------------------------------------------------: | :--------------------------------------------------------------: | :--------------------------------------------------------------: | :--------------------------------------------------------------: | :--------------------------------------------------------------: |
-|            [박패캠](https://github.com/UpstageAILab)             |            [이패캠](https://github.com/UpstageAILab)             |            [최패캠](https://github.com/UpstageAILab)             |            [김패캠](https://github.com/UpstageAILab)             |            [오패캠](https://github.com/UpstageAILab)             |
-|                            팀장, 담당 역할                             |                            담당 역할                             |                            담당 역할                             |                            담당 역할                             |                            담당 역할                             |
+|            김명철             |            김수환             |            김병현             |            송인섭             |            이가은             |
+|                            팀장, PM, 데이터분석                             |                            코드/로직 고도화                             |                            랭그래프 리팩토링, 비과학 질의 고도화                             |                            프롬프트 고도화                             |                            Hybrid  로직 연구                             |
 
 ## 0. Executive Summary (Project Context)
 과학 상식 관련 질의응답 시스템을 구축하는 프로젝트입니다. 단순 검색(BM25)만으로는 해결하기 어려운 복잡한 과학적 문맥을 이해하기 위해, **Upstage Solar Embedding**을 도입하여 Semantic Search 성능을 극대화했습니다.
@@ -23,7 +23,7 @@
 - **Result**: 검색 품질이 비약적으로 상승(MAP 0.88)하여, LLM이 정답을 생성하는 데 필요한 '증거 문서'를 거의 완벽하게 찾아낼 수 있었습니다.
 
 ### Environment
-- OS: Linux (WSL2) x86_64
+- OS: Linux (Ubuntu)
 - GPU: NVIDIA RTX 3090
 - Python 3.12
 - Elasticsearch 8.8.0 (analysis-nori)
@@ -96,7 +96,11 @@
 ### Modeling Process
 - 1) .env 로드 → 2) (옵션) 인덱스 재생성 + 임베딩 색인 → 3) 비과학 판별 → 4) LLM이 standalone query 생성 → 5) hybrid 검색(topk=3 기본, α=0.5 기본) → 6) LLM 최종 답변 → 7) `sample_submission_hybrid2.csv` 저장
 
-## 5. Result & Analysis
+## 5. Result
+
+### Leader Board
+- Rank: 1등
+- Score:MAP 0.8795`, `MRR 0.8818
 
 ### Performance Metric (Leader Board)
 - **Final Score**: MAP **0.7909** / MRR **0.7939** (Base Experiment)
