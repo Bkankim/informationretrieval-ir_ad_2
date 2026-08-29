@@ -1,123 +1,97 @@
-# 과학 질의응답 IR 대회 (RAG)
-<img width="1205" height="299" alt="image" src="https://github.com/user-attachments/assets/7e0830f5-aa77-49ac-be91-fccf168b6f7e" />
+# 과학 지식 질의 응답 시스템
+## Team
 
-## Quick Facts
-- 기간/팀: 2주, 4인
-- 역할(본인): 원본 BM25/단일 랭킹 파이프라인을 LangGraph 기반 그래프형 재랭킹으로 리팩토링, 프롬프트 고도화·튜닝
-- 문제: 과학 문서에서 질문에 맞는 증거/답변 검색·랭킹 품질이 낮아 MAP/MRR 저조
-- 지표: MAP/MRR 0.4242 → 0.8795 / 0.8818 (+107%, Public LB)
-- 스택: Solar Embedding, LangGraph, Elasticsearch, Prompt Tuning, Python
+| ![박패캠](https://avatars.githubusercontent.com/u/156163982?v=4) | ![이패캠](https://avatars.githubusercontent.com/u/156163982?v=4) | ![최패캠](https://avatars.githubusercontent.com/u/156163982?v=4) | ![김패캠](https://avatars.githubusercontent.com/u/156163982?v=4) | ![오패캠](https://avatars.githubusercontent.com/u/156163982?v=4) |
+| :--------------------------------------------------------------: | :--------------------------------------------------------------: | :--------------------------------------------------------------: | :--------------------------------------------------------------: | :--------------------------------------------------------------: |
+|            [박패캠](https://github.com/UpstageAILab)             |            [이패캠](https://github.com/UpstageAILab)             |            [최패캠](https://github.com/UpstageAILab)             |            [김패캠](https://github.com/UpstageAILab)             |            [오패캠](https://github.com/UpstageAILab)             |
+|                            팀장, 담당 역할                             |                            담당 역할                             |                            담당 역할                             |                            담당 역할                             |                            담당 역할                             |
 
-## Overview
-과학 도메인 질의응답 대회에서 검색·랭킹 품질이 부족해 정답 회수가 낮았습니다. 2주 안에 LangGraph 기반 RAG 파이프라인으로 재설계하고 랭킹·프롬프트를 튜닝해 MAP/MRR을 크게 끌어올리는 것이 목표였습니다.
-
-## Results
-- MAP: 0.4242 → 0.8795 (Public LB)
-- MRR: 0.4242 → 0.8818 (Public LB)
-- Public Leaderboard 기준 +107% 개선
-
-### Baseline → Final
-| Run | MAP | MRR | Notes |
-| --- | --- | --- | --- |
-| Baseline (BM25-only/원본 파이프라인) | 0.4242 | 0.4242 | 단일 BM25, 재랭킹 없음 |
-| Final (LangGraph + Solar) | 0.8795 | 0.8818 | LangGraph 흐름 + Solar 임베딩 재랭킹, Public LB (스크린샷 별도 제공 가능) |
-
-## Stack
-- 임베딩/랭킹: Solar Embedding, LangGraph 플로우 튜닝(Top-k·스코어 컷 조정), 후보 필터링
-- RAG/파이프라인: LangGraph 기반 RAG, Elasticsearch BM25, 비과학 필터링
-- LLM/프롬프트: Prompt Tuning(쿼리 리라이트·증거 강조), 응답 포맷 일관성
-- 실행/환경: Python, `uv`/pip, `.env`로 키/ES 설정, Shell 스크립트로 ES 설치/기동
-- 평가: MAP, MRR
-
-## Approach (STAR)
-- Situation: 초기 MAP/MRR 0.4242/0.4242로 과학 QA 검색·랭킹 품질 저조.
-- Task: 2주 내 랭킹 지표 대폭 개선; 나는 랭킹·프롬프트·튜닝 담당.
-- Action:
-  - Solar 임베딩 도입, **원본 BM25/단일 랭킹 → LangGraph 기반 그래프형 재랭킹 플로우로 재구성**하며 후보 필터·가중치 튜닝
-  - Top-k, 스코어 컷, 후보 필터링 튜닝으로 검색 후보 품질 개선
-  - 프롬프트 고도화: 쿼리 리라이트, 증거 강조 템플릿, 포맷 일관성 확보
-  - MAP/MRR 기반 실험 버전 관리·비교로 빠른 피드백 루프 구축
-- Result: MAP/MRR 0.4242 → 0.8795 / 0.8818(+107%) 달성
-
-## How to Run
-> 실제 키/경로에 맞게 `.env`와 옵션을 설정하세요.
-```bash
-# 0) 의존성 설치
-uv sync  # 또는 pip install -r code/requirements.txt
-
-# 1) 환경 변수(.env) 설정
-cp code/.env.example code/.env
-# .env에 ES_HOST/ES_USERNAME/ES_PASSWORD/ES_CA_CERT, SOLAR_API_KEY 혹은 OPENAI_API_KEY 기입
-
-# 2) Elasticsearch 설치/기동 (필요 시)
-bash code/install_elasticsearch.sh
-bash code/run_elasticsearch.sh
-# 종료: bash code/stop_elasticsearch.sh
-
-# 3) LangGraph RAG 실행 (인덱스 재사용 시 --skip-index)
-uv run python code/scripts/rag_with_langgraph.py --skip-index --alpha 0.5 --topk 3
-
-# 4) 제출/검증
-# 결과 파일 예: code/sample_submission_hybrid2.csv (평가 스크립트 출력 샘플)
-```
+## 0. Overview
+### Environment
+- OS: Linux (WSL2) x86_64
+- GPU: NVIDIA RTX 3090
+- Python 3.12
+- Elasticsearch 8.8.0 (analysis-nori)
+- LLM: Upstage Solar(OpenAI 호환) / 옵션으로 OpenAI, LangGraph 기반 파이프라인
+- Embedding: solar-embedding-1-large-(passage/query) → 4096d → 랜덤 프로젝션 1536d
 
 ### Requirements
-- Python 3.12, uv (권장) 또는 pip
-- Elasticsearch 8.8.0 (+ analysis-nori), 로컬 http://127.0.0.1:9200 기준
-- 필수 환경변수: `SOLAR_API_KEY` 또는 `OPENAI_API_KEY`, `ES_USERNAME`, `ES_PASSWORD`, `ES_CA_CERT` (로컬 보안 끈 경우 user/pass 생략 가능)
+- `uv sync` 또는 `pip install -r code/requirements.txt`
+- `.env` (예시: `code/.env.example`)
+  - `ES_HOST`(default `http://localhost:9200`), `ES_USERNAME`, `ES_PASSWORD`, `ES_CA_CERT`, `ES_INDEX`(default `test`)
+  - `SOLAR_API_KEY` 또는 `OPENAI_API_KEY` (둘 중 하나 필수)
+  - 선택: `LLM_MODEL`(default `solar-pro2`), `LLM_BASE_URL`(default `https://api.upstage.ai/v1`)
 
-### Data & Evaluation
-- `code/data/documents.jsonl` (~4.2k 문서), `code/data/eval.jsonl` (220개 쿼리/정답) — 대회 제공 과학 QA 코퍼스/밸리데이션 샘플
-- 제출/평가 출력 예시: `code/sample_submission_hybrid2.csv`
+## 1. Competiton Info
 
-## Challenges & Insights
-- 비과학/노이즈 문서 다량 → Elasticsearch 필터링 + LangGraph 단계별 후보 컷으로 정밀도 확보.
-- BM25-only/임베딩-only 편향 → 하이브리드 후보와 스코어 가중치 튜닝이 MAP/MRR 개선에 결정적.
-- 프롬프트 포맷 일관성 부족 → LangGraph 상태 머신으로 출력 스키마 검증·재시도 경로를 넣어 안정화.
-- 반복 실험 비용/속도 → 소형 eval 세트와 실험 로그(`experiments/`)로 빠른 피드백 루프 확보.
-- ES 자원/인덱싱 시간 제약 → 재인덱싱 스킵 플래그(`--skip-index`)와 샘플 데이터로 개발 속도 유지.
+### Overview
+- 대회명: 과학 지식 질의 응답 시스템
 
-## Repo Structure (핵심 파일)
+### Timeline
+- 2025.11.14 - Start Date
+- 2025.11.27 - Final submission deadline
+
+## 2. Components
+
+### Directory
 ```
-.
-|-- README.md
-|-- pyproject.toml
-|-- uv.lock
-`-- code/
-    |-- README.md               # LangGraph 기반 RAG 실행 가이드
-    |-- requirements.txt
-    |-- .env.example
-    |-- install_elasticsearch.sh
-    |-- run_elasticsearch.sh
-    |-- stop_elasticsearch.sh
-    |-- rag_with_elasticsearch.py
-    |-- run_once.py
-    |-- scripts/
-    |   `-- rag_with_langgraph.py # LangGraph RAG 실행 스크립트
-    |-- pipelines/
-    |   |-- langgraph_pipeline.py
-    |   `-- rag_callbacks.py
-    |-- retrieval/
-    |   |-- retriever.py
-    |   |-- elasticsearch_utils.py
-    |   `-- non_science.py        # 비과학 필터링
-    |-- llm/
-    |   |-- embedding.py
-    |   `-- generators.py
-    |-- config/
-    |   `-- settings.py
-    |-- data/
-    |   |-- documents.jsonl
-    |   `-- eval.jsonl
-    `-- experiments/
-        |-- experiment-log.md       # 실험 기록/결과 로그
-        `-- langgraph-skeleton.md   # LangGraph 설계/실험 노트
+├── README.md
+├── pyproject.toml
+├── uv.lock
+└── code
+    ├── .env.example
+    ├── README.md                      # LangGraph 실행 가이드
+    ├── config/                        # 환경 설정 로더
+    ├── data/                          # documents.jsonl, eval.jsonl (로컬 포함)
+    ├── experiments/                   # 실험 로그(MAP/MRR 기록)
+    ├── llm/                           # 임베딩/생성 모듈
+    ├── pipelines/                     # LangGraph 스켈레톤, 콜백 정의
+    ├── retrieval/                     # ES 유틸, hybrid BM25+dense, 비과학 필터
+    ├── scripts/rag_with_langgraph.py  # 메인 실행 스크립트
+    ├── rag_with_elasticsearch.py      # 상위 경로 호환 래퍼
+    ├── install_elasticsearch.sh / run_elasticsearch.sh / stop_elasticsearch.sh
+    └── requirements.txt
 ```
 
-## Lessons / Next
-- LangGraph 기반 플로우 튜닝 + 프롬프트 고도화가 랭킹 지표 개선에 직접 기여.
-- 다음: 도메인 확장, 경량 임베딩 실험, 하이브리드 검색(벡터+BM25), 에러 분석 자동화.
+## 3. Data descrption
 
-## Contact
-- Author: Byeonghyeon Kim (LangGraph 파이프라인·프롬프트·튜닝)
-- GitHub: https://github.com/Bkankim/informationretrieval-ir_ad_2
+### Dataset overview
+- `code/data/documents.jsonl`: 한국어 과학/상식 문단(`docid`, `content`)
+- `code/data/eval.jsonl`: 평가 질의(`eval_id`, `msg` 멀티턴 대화 포함)
+- 출력: `code/sample_submission_hybrid2.csv` (실행 시 생성, 기본 존재하지 않음)
+
+### EDA
+- 형식 검증 정도로 사용(별도 통계/시각화 없음)
+
+### Data Processing
+- Solar 임베딩 4096d → 1536d 랜덤 프로젝션 후 ES dense_vector 저장(cosine)
+- BM25(nori analyzer) + dense KNN 점수 정규화 후 hybrid 검색(α 가중)
+- 비과학 질의 정규식 필터로 검색/생성 스킵(topk 비움)
+
+## 4. Modeling
+
+### Model description
+- Retriever: Elasticsearch BM25(`match`, nori) + dense KNN, hybrid 가중(α)
+- Embedding: Upstage Solar passage/query 쌍, Johnson–Lindenstrauss 투영(1536d)
+- Generator: Upstage Solar(OpenAI 호환) LLM, LangGraph 노드로 orchestration
+- 비과학 필터: 규칙 기반 정규식(`retrieval/non_science.py`)
+
+### Modeling Process
+- 1) .env 로드 → 2) (옵션) 인덱스 재생성 + 임베딩 색인 → 3) 비과학 판별 → 4) LLM이 standalone query 생성 → 5) hybrid 검색(topk=3 기본, α=0.5 기본) → 6) LLM 최종 답변 → 7) `sample_submission_hybrid2.csv` 저장
+
+## 5. Result
+
+### Leader Board
+- Rank: (비움)
+- Score: MAP 0.7909 / MRR 0.7939 (`code/experiments/experiment-log.md` 기준)
+
+### Presentation
+- (발표 자료 링크 추가 예정)
+
+## etc
+
+### Meeting Log
+- (회의록 링크 추가 예정)
+
+### Reference
+- LangGraph, Elasticsearch 8.8.0 + analysis-nori, Upstage Solar Embedding/LLM, hybrid BM25+dense, 비과학 규칙 필터
